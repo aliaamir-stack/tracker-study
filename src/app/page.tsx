@@ -1,69 +1,77 @@
-import Image from "next/image";
+import { redirect } from "next/navigation";
+import Link from "next/link";
+import { getSupabaseEnv } from "@/lib/env";
+import { createClient } from "@/lib/supabase/server";
+export const instant = false;
 
-export default function Home() {
-  return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert h-5 w-[100px]"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the{" "}
-            <code className="rounded bg-black/[.06] px-1.5 py-0.5 font-mono text-[0.9em] dark:bg-white/[.08]">
-              page.tsx
-            </code>{" "}
-            file.
+export default async function HomePage() {
+  const env = getSupabaseEnv();
+
+  if (!env) {
+    return (
+      <div className="flex flex-1 items-center justify-center bg-slate-50 px-4">
+        <div className="max-w-lg space-y-4 rounded-2xl border border-slate-200 bg-white p-8 shadow-sm">
+          <h1 className="text-2xl font-semibold text-slate-900">
+            CAIE Progress Tracker
           </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
+          <p className="text-slate-600">
+            Add your Supabase keys to finish setup:
           </p>
+          <ol className="list-decimal space-y-2 pl-5 text-sm text-slate-700">
+            <li>
+              Copy <code className="rounded bg-slate-100 px-1">.env.local.example</code>{" "}
+              → <code className="rounded bg-slate-100 px-1">.env.local</code>
+            </li>
+            <li>
+              Paste <strong>Project URL</strong> and <strong>anon key</strong> from
+              Supabase → Settings → API
+            </li>
+            <li>
+              Restart <code className="rounded bg-slate-100 px-1">npm run dev</code>
+            </li>
+          </ol>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert h-[14px] w-4"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={14}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
+      </div>
+    );
+  }
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    redirect("/login");
+  }
+
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("role")
+    .eq("id", user.id)
+    .single();
+
+  if (profile?.role === "tutor") {
+    redirect("/tutor");
+  }
+  if (profile?.role === "student") {
+    redirect("/student");
+  }
+
+  return (
+    <div className="flex flex-1 items-center justify-center px-4">
+      <div className="max-w-md space-y-4 text-center">
+        <h1 className="text-xl font-semibold">Profile role not set</h1>
+        <p className="text-sm text-slate-600">
+          Update <code>profiles.role</code> to <code>tutor</code> or{" "}
+          <code>student</code> in the Supabase Table Editor.
+        </p>
+        <Link
+          href="/login"
+          className="inline-flex h-8 items-center justify-center rounded-lg bg-primary px-3 text-sm font-medium text-primary-foreground"
+        >
+          Back to login
+        </Link>
+      </div>
     </div>
   );
 }
